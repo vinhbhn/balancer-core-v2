@@ -30,10 +30,10 @@ contract StablePool is BaseGeneralPool, StableMath {
     uint256 private constant _MIN_UPDATE_TIME = 86400;
     uint256 private constant _MAX_AMP_UPDATE_FACTOR = 10 * (1e18);
 
-    uint256 private _amplificationParameter;
-    uint256 private _amplificationParameterLastUpdated;
-    uint256 private _targetAmplificationParameter;
-    uint256 private _targetAmplificationParameterTime;
+    uint256 private _initialAmp;
+    uint256 private _initialAmpTime;
+    uint256 private _targetAmp;
+    uint256 private _targetAmpTime;
 
     uint256 private _lastInvariant;
 
@@ -58,80 +58,71 @@ contract StablePool is BaseGeneralPool, StableMath {
 
         require(tokens.length <= _MAX_STABLE_TOKENS, "MAX_STABLE_TOKENS");
 
-        _amplificationParameter = amplificationParameter;
-        _targetAmplificationParameter = amplificationParameter;
+        _initialAmp = amplificationParameter;
+        _targetAmp = amplificationParameter;
     }
 
     //It returns the amplification parameter taking into consideration that it can be updated over a period of time
-    function getAmplification() public view returns (uint256) {
-        uint256 targetAmplificationParameter = _targetAmplificationParameter;
-        uint256 targetAmplificationParameterTime = _targetAmplificationParameterTime;
+    function getAmplificationParameter() public view returns (uint256) {
+        uint256 targetAmp = _targetAmp;
+        uint256 targetAmpTime = _targetAmpTime;
 
-        if (block.timestamp < targetAmplificationParameterTime) {
-            uint256 amplificationParameter = _amplificationParameter;
-            uint256 amplificationParameterLastUpdated = _amplificationParameterLastUpdated;
+        if (block.timestamp < targetAmpTime) {
+            uint256 initalAmp = _initialAmp;
+            uint256 initalAmpTime = _initialAmpTime;
 
-            if (targetAmplificationParameter > amplificationParameter) {
+            if (targetAmp > initalAmp) {
                 return
-                    amplificationParameter +
-                    ((targetAmplificationParameter - amplificationParameter) *
-                        (block.timestamp - amplificationParameterLastUpdated)) /
-                    (targetAmplificationParameterTime - amplificationParameterLastUpdated);
+                    initalAmp +
+                    ((targetAmp - initalAmp) * (block.timestamp - initalAmpTime)) /
+                    (targetAmpTime - initalAmpTime);
             } else {
                 return
-                    amplificationParameter -
-                    ((amplificationParameter - targetAmplificationParameter) *
-                        (block.timestamp - amplificationParameterLastUpdated)) /
-                    (targetAmplificationParameterTime - amplificationParameterLastUpdated);
+                    initalAmp -
+                    ((initalAmp - targetAmp) * (block.timestamp - initalAmpTime)) /
+                    (targetAmpTime - initalAmpTime);
             }
         } else {
-            return targetAmplificationParameter;
+            return targetAmp;
         }
     }
 
-    function startAmplificationParamaterUpdate(uint256 targetAmplificationParameter, uint256 targetTime)
-        external
-        authenticate
-    {
-        require(targetAmplificationParameter >= _MIN_AMP, "MIN_AMP");
-        require(targetAmplificationParameter <= _MAX_AMP, "MAX_AMP");
+    //Admin functions
+
+    function startAmplificationParamaterUpdate(uint256 targetAmp, uint256 targetTime) external authenticate {
+        require(targetAmp >= _MIN_AMP, "MIN_AMP");
+        require(targetAmp <= _MAX_AMP, "MAX_AMP");
 
         //Check target time is far enough
         require(targetTime >= block.timestamp + _MIN_UPDATE_TIME, "AMP_INSUF_TARGET_TIME");
 
         //It can only be set if it is not being updated
-        require(block.timestamp >= _targetAmplificationParameterTime, "AMP_ONGOING_UPDATE");
+        require(block.timestamp >= _targetAmpTime, "AMP_ONGOING_UPDATE");
 
-        uint256 initialAmplificationParameter = getAmplification();
+        uint256 initialAmp = getAmplificationParameter();
 
-        if (targetAmplificationParameter < initialAmplificationParameter) {
-            require(
-                targetAmplificationParameter.mul(_MAX_AMP_UPDATE_FACTOR) >= initialAmplificationParameter,
-                "AMP_FACTOR"
-            );
+        if (targetAmp < initialAmp) {
+            require(targetAmp.mul(_MAX_AMP_UPDATE_FACTOR) >= initialAmp, "AMP_FACTOR");
         } else {
-            require(
-                targetAmplificationParameter <= initialAmplificationParameter.mul(_MAX_AMP_UPDATE_FACTOR),
-                "AMP_FACTOR"
-            );
+            require(targetAmp <= initialAmp.mul(_MAX_AMP_UPDATE_FACTOR), "AMP_FACTOR");
         }
 
-        _amplificationParameter = initialAmplificationParameter;
-        _targetAmplificationParameter = targetAmplificationParameter;
-        _amplificationParameterLastUpdated = block.timestamp;
-        _targetAmplificationParameterTime = targetTime;
+        _initialAmp = initialAmp;
+        _targetAmp = targetAmp;
+        _initialAmpTime = block.timestamp;
+        _targetAmpTime = targetTime;
 
-        emit AmpUpdateStarted(initialAmplificationParameter, targetAmplificationParameter, block.timestamp, targetTime);
+        emit AmpUpdateStarted(initialAmp, targetAmp, block.timestamp, targetTime);
     }
 
     function stopAmplificationParameterUpdate() external authenticate {
-        uint256 currentAmplificationParameter = getAmplification();
-        _amplificationParameter = currentAmplificationParameter;
-        _targetAmplificationParameter = currentAmplificationParameter;
-        _amplificationParameterLastUpdated = block.timestamp;
-        _targetAmplificationParameterTime = block.timestamp;
+        uint256 currentAmp = getAmplificationParameter();
+        _initialAmp = currentAmp;
+        _targetAmp = currentAmp;
+        _initialAmpTime = block.timestamp;
+        _targetAmpTime = block.timestamp;
 
-        emit AmpUpdateStopped(currentAmplificationParameter);
+        emit AmpUpdateStopped(currentAmp);
     }
 
     // Base Pool handlers
@@ -145,7 +136,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256 indexOut
     ) internal view virtual override noEmergencyPeriod returns (uint256) {
         uint256 amountOut = StableMath._calcOutGivenIn(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             indexIn,
             indexOut,
@@ -162,7 +153,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256 indexOut
     ) internal view virtual override noEmergencyPeriod returns (uint256) {
         uint256 amountIn = StableMath._calcInGivenOut(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             indexIn,
             indexOut,
@@ -187,7 +178,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         InputHelpers.ensureInputLengthMatch(amountsIn.length, _totalTokens);
         _upscaleArray(amountsIn, _scalingFactors());
 
-        uint256 invariantAfterJoin = StableMath._calculateInvariant(_amplificationParameter, amountsIn);
+        uint256 invariantAfterJoin = StableMath._calculateInvariant(getAmplificationParameter(), amountsIn);
         uint256 bptAmountOut = invariantAfterJoin;
 
         _lastInvariant = invariantAfterJoin;
@@ -265,7 +256,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         _upscaleArray(amountsIn, _scalingFactors());
 
         uint256 bptAmountOut = StableMath._calcBptOutGivenExactTokensIn(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             amountsIn,
             totalSupply(),
@@ -285,7 +276,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         (uint256 bptAmountOut, uint256 tokenIndex) = userData.tokenInForExactBptOut();
 
         uint256 amountIn = StableMath._calcTokenInGivenExactBptOut(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             tokenIndex,
             bptAmountOut,
@@ -376,7 +367,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256[] memory amountsOut = new uint256[](_totalTokens);
 
         amountsOut[tokenIndex] = StableMath._calcTokenOutGivenExactBptIn(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             tokenIndex,
             bptAmountIn,
@@ -415,7 +406,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         _upscaleArray(amountsOut, _scalingFactors());
 
         uint256 bptAmountIn = StableMath._calcBptInGivenExactTokensOut(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             amountsOut,
             totalSupply(),
@@ -453,7 +444,7 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256[] memory dueProtocolFeeAmounts = new uint256[](_totalTokens);
         // Set the fee to pay in the selected token
         dueProtocolFeeAmounts[chosenTokenIndex] = StableMath._calcDueTokenProtocolSwapFee(
-            _amplificationParameter,
+            getAmplificationParameter(),
             balances,
             previousInvariant,
             chosenTokenIndex,
@@ -468,7 +459,7 @@ contract StablePool is BaseGeneralPool, StableMath {
             balances[i] = balances[i].add(amountsIn[i]);
         }
 
-        return StableMath._calculateInvariant(_amplificationParameter, balances);
+        return StableMath._calculateInvariant(getAmplificationParameter(), balances);
     }
 
     function _invariantAfterExit(uint256[] memory balances, uint256[] memory amountsOut)
@@ -480,7 +471,7 @@ contract StablePool is BaseGeneralPool, StableMath {
             balances[i] = balances[i].sub(amountsOut[i]);
         }
 
-        return StableMath._calculateInvariant(_amplificationParameter, balances);
+        return StableMath._calculateInvariant(getAmplificationParameter(), balances);
     }
 
     // This function returns the appreciation of one BPT relative to the
@@ -488,6 +479,6 @@ contract StablePool is BaseGeneralPool, StableMath {
     // It's the equivalent to Curve's get_virtual_price() function
     function getRate() public view override returns (uint256) {
         (, uint256[] memory balances) = _vault.getPoolTokens(_poolId);
-        return StableMath._calculateInvariant(_amplificationParameter, balances).div(totalSupply());
+        return StableMath._calculateInvariant(getAmplificationParameter(), balances).div(totalSupply());
     }
 }

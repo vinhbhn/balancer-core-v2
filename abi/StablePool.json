@@ -258,7 +258,7 @@
   },
   {
     "inputs": [],
-    "name": "getAmplification",
+    "name": "getAmplificationParameter",
     "outputs": [
       {
         "internalType": "uint256",
@@ -792,7 +792,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "targetAmplificationParameter",
+        "name": "targetAmp",
         "type": "uint256"
       },
       {
