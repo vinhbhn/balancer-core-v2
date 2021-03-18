@@ -30,18 +30,15 @@ contract StablePool is BaseGeneralPool, StableMath {
     uint256 private constant _MIN_UPDATE_TIME = 86400;
     uint256 private constant _MAX_AMP_UPDATE_FACTOR = 10 * (1e18);
 
-    uint256 private _initialAmp;
-    uint256 private _initialAmpTime;
-    uint256 private _targetAmp;
-    uint256 private _targetAmpTime;
+    bytes32 private _ampData;
 
     uint256 private _lastInvariant;
 
     enum JoinKind { INIT, EXACT_TOKENS_IN_FOR_BPT_OUT, TOKEN_IN_FOR_EXACT_BPT_OUT }
     enum ExitKind { EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, EXACT_BPT_IN_FOR_ALL_TOKENS_OUT, BPT_IN_FOR_EXACT_TOKENS_OUT }
 
-    event AmpUpdateStarted(uint256 previousAmp, uint256 newAmp, uint256 intialTime, uint256 targetTime);
-    event AmpUpdateStopped(uint256 currentAmp);
+    event AmpUpdateStarted(uint256 initialValue, uint256 targetValue, uint256 initialBlock, uint256 targetBlock);
+    event AmpUpdateStopped(uint256 currentValue);
 
     constructor(
         IVault vault,
@@ -58,71 +55,114 @@ contract StablePool is BaseGeneralPool, StableMath {
 
         require(tokens.length <= _MAX_STABLE_TOKENS, "MAX_STABLE_TOKENS");
 
-        _initialAmp = amplificationParameter;
-        _targetAmp = amplificationParameter;
+        // Amplification parameter can be packed in 64 bit because the value is an intenger between 0 and 5000
+        uint64 downScaledAmpValue = uint64(amplificationParameter / 1e18);
+
+        //Pack amplification data.
+        _ampData = _packAmplificationData(
+            downScaledAmpValue,
+            downScaledAmpValue,
+            uint64(block.timestamp),
+            uint64(block.timestamp)
+        );
+    }
+
+    //Getters
+
+    // This function returns the appreciation of one BPT relative to the
+    // underlying tokens. This starts at 1 when the pool is initialized and grows over time
+    // It's the equivalent to Curve's get_virtual_price() function
+    function getRate() public view override returns (uint256) {
+        (, uint256[] memory balances) = _vault.getPoolTokens(_poolId);
+
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        return StableMath._calculateInvariant(currentAmp, balances).div(totalSupply());
     }
 
     //It returns the amplification parameter taking into consideration that it can be updated over a period of time
-    function getAmplificationParameter() public view returns (uint256) {
-        uint256 targetAmp = _targetAmp;
-        uint256 targetAmpTime = _targetAmpTime;
+    function getAmplificationParameter() public view returns (uint256 value, bool isUpdating) {
+        (
+            uint256 downScaledInitialValue,
+            uint256 downScaledTargetValue,
+            uint256 initialBlock,
+            uint256 targetBlock
+        ) = _unpackAmplificationData(_ampData);
 
-        if (block.timestamp < targetAmpTime) {
-            uint256 initalAmp = _initialAmp;
-            uint256 initalAmpTime = _initialAmpTime;
+        uint256 initialValue = downScaledInitialValue * 1e18;
+        uint256 targetValue = downScaledTargetValue * 1e18;
 
-            if (targetAmp > initalAmp) {
-                return
-                    initalAmp +
-                    ((targetAmp - initalAmp) * (block.timestamp - initalAmpTime)) /
-                    (targetAmpTime - initalAmpTime);
+        if (block.timestamp < targetBlock) {
+            isUpdating = true;
+            if (targetValue > initialValue) {
+                value =
+                    initialValue +
+                    ((targetValue - initialValue) * (block.timestamp - initialBlock)) /
+                    (targetBlock - initialBlock);
             } else {
-                return
-                    initalAmp -
-                    ((initalAmp - targetAmp) * (block.timestamp - initalAmpTime)) /
-                    (targetAmpTime - initalAmpTime);
+                value =
+                    initialValue -
+                    ((initialValue - targetValue) * (block.timestamp - initialBlock)) /
+                    (targetBlock - initialBlock);
             }
         } else {
-            return targetAmp;
+            isUpdating = false;
+            value = targetValue;
         }
     }
 
     //Admin functions
 
-    function startAmplificationParamaterUpdate(uint256 targetAmp, uint256 targetTime) external authenticate {
-        require(targetAmp >= _MIN_AMP, "MIN_AMP");
-        require(targetAmp <= _MAX_AMP, "MAX_AMP");
+    function startAmplificationParamaterUpdate(uint256 targetValue, uint256 targetBlock) external authenticate {
+        require(targetValue >= _MIN_AMP, "MIN_AMP");
+        require(targetValue <= _MAX_AMP, "MAX_AMP");
 
         //Check target time is far enough
-        require(targetTime >= block.timestamp + _MIN_UPDATE_TIME, "AMP_INSUF_TARGET_TIME");
+        require(targetBlock >= block.timestamp + _MIN_UPDATE_TIME, "AMP_INSUF_TARGET_TIME");
+
+        (uint256 currentValue, bool isUpdating) = getAmplificationParameter();
 
         //It can only be set if it is not being updated
-        require(block.timestamp >= _targetAmpTime, "AMP_ONGOING_UPDATE");
+        require(!isUpdating, "AMP_ONGOING_UPDATE");
 
-        uint256 initialAmp = getAmplificationParameter();
-
-        if (targetAmp < initialAmp) {
-            require(targetAmp.mul(_MAX_AMP_UPDATE_FACTOR) >= initialAmp, "AMP_FACTOR");
+        if (targetValue < currentValue) {
+            require(targetValue.mul(_MAX_AMP_UPDATE_FACTOR) >= currentValue, "AMP_FACTOR");
         } else {
-            require(targetAmp <= initialAmp.mul(_MAX_AMP_UPDATE_FACTOR), "AMP_FACTOR");
+            require(targetValue <= currentValue.mul(_MAX_AMP_UPDATE_FACTOR), "AMP_FACTOR");
         }
 
-        _initialAmp = initialAmp;
-        _targetAmp = targetAmp;
-        _initialAmpTime = block.timestamp;
-        _targetAmpTime = targetTime;
+        // Values can be packed in 64 bit because they are intengers between 0 and 5000
+        uint64 downScaledCurrentValue = uint64(currentValue / 1e18);
+        uint64 downScaledTargetValue = uint64(targetValue / 1e18);
 
-        emit AmpUpdateStarted(initialAmp, targetAmp, block.timestamp, targetTime);
+        //Pack amplification data.
+        _ampData = _packAmplificationData(
+            downScaledCurrentValue,
+            downScaledTargetValue,
+            uint64(block.timestamp),
+            uint64(targetBlock)
+        );
+
+        emit AmpUpdateStarted(currentValue, targetValue, block.timestamp, targetBlock);
     }
 
     function stopAmplificationParameterUpdate() external authenticate {
-        uint256 currentAmp = getAmplificationParameter();
-        _initialAmp = currentAmp;
-        _targetAmp = currentAmp;
-        _initialAmpTime = block.timestamp;
-        _targetAmpTime = block.timestamp;
+        (uint256 currentValue, bool isUpdating) = getAmplificationParameter();
 
-        emit AmpUpdateStopped(currentAmp);
+        require(isUpdating, "AMP_NO_ONGOING_UPDATE");
+
+        // Value can be packed in 64 bit because it is an intenger between 0 and 5000
+        uint64 downScaledCurrentValue = uint64(currentValue / 1e18);
+
+        //Pack amplification data.
+        _ampData = _packAmplificationData(
+            downScaledCurrentValue,
+            downScaledCurrentValue,
+            uint64(block.timestamp),
+            uint64(block.timestamp)
+        );
+
+        emit AmpUpdateStopped(currentValue);
     }
 
     // Base Pool handlers
@@ -135,13 +175,9 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256 indexIn,
         uint256 indexOut
     ) internal view virtual override noEmergencyPeriod returns (uint256) {
-        uint256 amountOut = StableMath._calcOutGivenIn(
-            getAmplificationParameter(),
-            balances,
-            indexIn,
-            indexOut,
-            swapRequest.amountIn
-        );
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        uint256 amountOut = StableMath._calcOutGivenIn(currentAmp, balances, indexIn, indexOut, swapRequest.amountIn);
 
         return amountOut;
     }
@@ -152,13 +188,9 @@ contract StablePool is BaseGeneralPool, StableMath {
         uint256 indexIn,
         uint256 indexOut
     ) internal view virtual override noEmergencyPeriod returns (uint256) {
-        uint256 amountIn = StableMath._calcInGivenOut(
-            getAmplificationParameter(),
-            balances,
-            indexIn,
-            indexOut,
-            swapRequest.amountOut
-        );
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        uint256 amountIn = StableMath._calcInGivenOut(currentAmp, balances, indexIn, indexOut, swapRequest.amountOut);
 
         return amountIn;
     }
@@ -178,7 +210,9 @@ contract StablePool is BaseGeneralPool, StableMath {
         InputHelpers.ensureInputLengthMatch(amountsIn.length, _totalTokens);
         _upscaleArray(amountsIn, _scalingFactors());
 
-        uint256 invariantAfterJoin = StableMath._calculateInvariant(getAmplificationParameter(), amountsIn);
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        uint256 invariantAfterJoin = StableMath._calculateInvariant(currentAmp, amountsIn);
         uint256 bptAmountOut = invariantAfterJoin;
 
         _lastInvariant = invariantAfterJoin;
@@ -255,8 +289,10 @@ contract StablePool is BaseGeneralPool, StableMath {
         require(amountsIn.length == _totalTokens, "ERR_AMOUNTS_IN_LENGTH");
         _upscaleArray(amountsIn, _scalingFactors());
 
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
         uint256 bptAmountOut = StableMath._calcBptOutGivenExactTokensIn(
-            getAmplificationParameter(),
+            currentAmp,
             balances,
             amountsIn,
             totalSupply(),
@@ -275,8 +311,10 @@ contract StablePool is BaseGeneralPool, StableMath {
     {
         (uint256 bptAmountOut, uint256 tokenIndex) = userData.tokenInForExactBptOut();
 
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
         uint256 amountIn = StableMath._calcTokenInGivenExactBptOut(
-            getAmplificationParameter(),
+            currentAmp,
             balances,
             tokenIndex,
             bptAmountOut,
@@ -366,8 +404,10 @@ contract StablePool is BaseGeneralPool, StableMath {
         // We exit in a single token, so we initialize amountsOut with zeros
         uint256[] memory amountsOut = new uint256[](_totalTokens);
 
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
         amountsOut[tokenIndex] = StableMath._calcTokenOutGivenExactBptIn(
-            getAmplificationParameter(),
+            currentAmp,
             balances,
             tokenIndex,
             bptAmountIn,
@@ -405,8 +445,10 @@ contract StablePool is BaseGeneralPool, StableMath {
 
         _upscaleArray(amountsOut, _scalingFactors());
 
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
         uint256 bptAmountIn = StableMath._calcBptInGivenExactTokensOut(
-            getAmplificationParameter(),
+            currentAmp,
             balances,
             amountsOut,
             totalSupply(),
@@ -440,11 +482,13 @@ contract StablePool is BaseGeneralPool, StableMath {
             }
         }
 
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
         // Initialize with zeros
         uint256[] memory dueProtocolFeeAmounts = new uint256[](_totalTokens);
         // Set the fee to pay in the selected token
         dueProtocolFeeAmounts[chosenTokenIndex] = StableMath._calcDueTokenProtocolSwapFee(
-            getAmplificationParameter(),
+            currentAmp,
             balances,
             previousInvariant,
             chosenTokenIndex,
@@ -459,7 +503,9 @@ contract StablePool is BaseGeneralPool, StableMath {
             balances[i] = balances[i].add(amountsIn[i]);
         }
 
-        return StableMath._calculateInvariant(getAmplificationParameter(), balances);
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        return StableMath._calculateInvariant(currentAmp, balances);
     }
 
     function _invariantAfterExit(uint256[] memory balances, uint256[] memory amountsOut)
@@ -471,14 +517,41 @@ contract StablePool is BaseGeneralPool, StableMath {
             balances[i] = balances[i].sub(amountsOut[i]);
         }
 
-        return StableMath._calculateInvariant(getAmplificationParameter(), balances);
+        (uint256 currentAmp, ) = getAmplificationParameter();
+
+        return StableMath._calculateInvariant(currentAmp, balances);
     }
 
-    // This function returns the appreciation of one BPT relative to the
-    // underlying tokens. This starts at 1 when the pool is initialized and grows over time
-    // It's the equivalent to Curve's get_virtual_price() function
-    function getRate() public view override returns (uint256) {
-        (, uint256[] memory balances) = _vault.getPoolTokens(_poolId);
-        return StableMath._calculateInvariant(getAmplificationParameter(), balances).div(totalSupply());
+    //Private
+
+    function _packAmplificationData(
+        uint64 initialValue,
+        uint64 targetValue,
+        uint64 initialBlock,
+        uint64 targetBlock
+    ) private pure returns (bytes32) {
+        uint256 packedAmp = 0;
+        packedAmp |= uint256(initialValue);
+        packedAmp |= uint256(targetValue) << (64);
+        packedAmp |= uint256(initialBlock) << (64 * 2);
+        packedAmp |= uint256(targetBlock) << (64 * 3);
+        return bytes32(packedAmp);
+    }
+
+    function _unpackAmplificationData(bytes32 packedAmp)
+        private
+        pure
+        returns (
+            uint256 initialValue,
+            uint256 targetValue,
+            uint256 initialBlock,
+            uint256 targetBlock
+        )
+    {
+        uint256 mask = ((2**64) - 1);
+        initialValue = uint256(packedAmp) & mask;
+        targetValue = (uint256(packedAmp) >> 64) & mask;
+        initialBlock = (uint256(packedAmp) >> (64 * 2)) & mask;
+        targetBlock = (uint256(packedAmp) >> (64 * 3)) & mask;
     }
 }

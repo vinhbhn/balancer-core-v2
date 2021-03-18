@@ -51,25 +51,25 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "previousAmp",
+        "name": "initialValue",
         "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "newAmp",
+        "name": "targetValue",
         "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "intialTime",
+        "name": "initialBlock",
         "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "targetTime",
+        "name": "targetBlock",
         "type": "uint256"
       }
     ],
@@ -82,7 +82,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "currentAmp",
+        "name": "currentValue",
         "type": "uint256"
       }
     ],
@@ -262,8 +262,13 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "value",
         "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isUpdating",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -792,12 +797,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "targetAmp",
+        "name": "targetValue",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "targetTime",
+        "name": "targetBlock",
         "type": "uint256"
       }
     ],
