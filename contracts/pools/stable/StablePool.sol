@@ -27,12 +27,25 @@ contract StablePool is BaseGeneralPool, StableMath {
     using FixedPoint for uint256;
     using StablePoolUserDataHelpers for bytes;
 
-    uint256 private immutable _amp;
+    uint256 private constant _MIN_UPDATE_TIME = 86400;
+    uint256 private constant _MAX_AMP_UPDATE_FACTOR = 10 * (1e18);
+
+    uint256 private _amp;
+    uint256 private _amplificationParameterLastUpdated;
+    uint256 private _targetAmplificationParameter;
+    uint256 private _targetAmplificationParameterTime;
 
     uint256 private _lastInvariant;
 
     enum JoinKind { INIT, ALL_TOKENS_IN_FOR_EXACT_BPT_OUT }
     enum ExitKind { EXACT_BPT_IN_FOR_ONE_TOKEN_OUT }
+
+    event AmpUpdateStarted(uint256 previousAmp, uint256 newAmp, uint256 intialTime, uint256 targetTime);
+    event AmpUpdateStopped(uint256 currentAmp);
+
+    // event StopRampA:
+    //     A: uint256
+    //     t: uint256
 
     constructor(
         IVault vault,
@@ -47,10 +60,79 @@ contract StablePool is BaseGeneralPool, StableMath {
         require(amp >= _MIN_AMP, "MIN_AMP");
         require(amp <= _MAX_AMP, "MAX_AMP");
         _amp = amp;
+        _targetAmplificationParameter = amp;
     }
 
-    function getAmplification() external view returns (uint256) {
-        return _amp;
+    //It returns the amplification parameter taking into consideration that it can be updated over a period of time
+    function getAmplification() public view returns (uint256) {
+        uint256 targetAmplificationParameter = _targetAmplificationParameter;
+        uint256 targetAmplificationParameterTime = _targetAmplificationParameterTime;
+
+        if (block.timestamp < targetAmplificationParameterTime) {
+            uint256 amplificationParameter = _amp;
+            uint256 amplificationParameterLastUpdated = _amplificationParameterLastUpdated;
+
+            if (targetAmplificationParameter > amplificationParameter) {
+                return
+                    amplificationParameter +
+                    ((targetAmplificationParameter - amplificationParameter) *
+                        (block.timestamp - amplificationParameterLastUpdated)) /
+                    (targetAmplificationParameterTime - amplificationParameterLastUpdated);
+            } else {
+                return
+                    amplificationParameter -
+                    ((amplificationParameter - targetAmplificationParameter) *
+                        (block.timestamp - amplificationParameterLastUpdated)) /
+                    (targetAmplificationParameterTime - amplificationParameterLastUpdated);
+            }
+        } else {
+            return targetAmplificationParameter;
+        }
+    }
+
+    function startAmplificationParamaterUpdate(uint256 targetAmplificationParameter, uint256 targetTime)
+        external
+        authenticate
+    {
+        require(targetAmplificationParameter >= _MIN_AMP, "MIN_AMP");
+        require(targetAmplificationParameter <= _MAX_AMP, "MAX_AMP");
+
+        //Check target time is far enough
+        require(targetTime >= block.timestamp + _MIN_UPDATE_TIME, "AMP_INSUF_TARGET_TIME");
+
+        //It can only be set if it is not being updated
+        require(block.timestamp >= _targetAmplificationParameterTime, "AMP_ONGOING_UPDATE");
+
+        uint256 initialAmplificationParameter = getAmplification();
+
+        if (targetAmplificationParameter < initialAmplificationParameter) {
+            require(
+                targetAmplificationParameter.mul(_MAX_AMP_UPDATE_FACTOR) >= initialAmplificationParameter,
+                "AMP_FACTOR"
+            );
+        } else {
+            require(
+                targetAmplificationParameter <= initialAmplificationParameter.mul(_MAX_AMP_UPDATE_FACTOR),
+                "AMP_FACTOR"
+            );
+        }
+
+        _amp = initialAmplificationParameter;
+        _targetAmplificationParameter = targetAmplificationParameter;
+        _amplificationParameterLastUpdated = block.timestamp;
+        _targetAmplificationParameterTime = targetTime;
+
+        emit AmpUpdateStarted(initialAmplificationParameter, targetAmplificationParameter, block.timestamp, targetTime);
+    }
+
+    function stopAmplificationParameterUpdate() external authenticate {
+        uint256 currentAmplificationParameter = getAmplification();
+        _amp = currentAmplificationParameter;
+        _targetAmplificationParameter = currentAmplificationParameter;
+        _amplificationParameterLastUpdated = block.timestamp;
+        _targetAmplificationParameterTime = block.timestamp;
+
+        emit AmpUpdateStopped(currentAmplificationParameter);
     }
 
     // Base Pool handlers

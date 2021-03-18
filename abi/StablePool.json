@@ -49,6 +49,50 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "previousAmp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newAmp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "intialTime",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "targetTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "AmpUpdateStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "currentAmp",
+        "type": "uint256"
+      }
+    ],
+    "name": "AmpUpdateStopped",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "owner",
@@ -727,6 +771,31 @@
       }
     ],
     "name": "setSwapFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "targetAmplificationParameter",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "targetTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "startAmplificationParamaterUpdate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "stopAmplificationParameterUpdate",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
