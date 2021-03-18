@@ -138,7 +138,7 @@ describe('StablePool', function () {
         });
 
         it('sets amplification', async () => {
-          expect(await pool.getAmplificationParameter()).to.deep.equal(amplification);
+          expect((await pool.getAmplificationParameter())[0]).to.deep.equal(amplification);
         });
 
         it('sets swap fee', async () => {

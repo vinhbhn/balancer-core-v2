@@ -23,6 +23,7 @@ import "../BaseGeneralPool.sol";
 import "./StableMath.sol";
 import "./StablePoolUserDataHelpers.sol";
 
+// solhint-disable not-rely-on-time
 contract StablePool is BaseGeneralPool, StableMath {
     using FixedPoint for uint256;
     using StablePoolUserDataHelpers for bytes;
