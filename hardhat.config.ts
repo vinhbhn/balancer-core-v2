@@ -55,6 +55,7 @@ export default {
       chainId: CHAIN_IDS.mainnet,
       url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
+      gasPrice: 300000000000,
       saveDeployments: true,
     },
     ropsten: {

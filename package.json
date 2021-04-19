@@ -33,6 +33,7 @@
     "deploy:kovan": "hardhat --network kovan deploy",
     "deploy:ropsten": "hardhat --network ropsten deploy",
     "deploy:goerli": "hardhat --network goerli deploy",
+    "deploy:mainnet": "hardhat --network mainnet deploy",
     "node:hardhat": "hardhat node",
     "prepack": "tsc && yarn compile",
     "seed:local": "hardhat --network localhost seed",

@@ -21,16 +21,16 @@ export default async function (hre: HardhatRuntimeEnvironment): Promise<void> {
     });
   }
 
-  const stableFactory = await deploy('StablePoolFactory', {
-    from: deployer,
-    args: [vault.address],
-    log: true,
-  });
+  // const stableFactory = await deploy('StablePoolFactory', {
+  //   from: deployer,
+  //   args: [vault.address],
+  //   log: true,
+  // });
 
-  if (hre.network.live) {
-    await tenderly.push({
-      name: 'StablePoolFactory',
-      address: stableFactory.address,
-    });
-  }
+  // if (hre.network.live) {
+  //   await tenderly.push({
+  //     name: 'StablePoolFactory',
+  //     address: stableFactory.address,
+  //   });
+  // }
 }
