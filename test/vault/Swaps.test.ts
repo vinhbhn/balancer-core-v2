@@ -170,6 +170,67 @@ describe('Vault - swaps', () => {
           );
         });
 
+        it('received ETH is wrapped into WETH (single swap)', async () => {
+          const swapData = {
+            kind: SWAP_KIND.GIVEN_IN,
+            poolId: mainPoolId,
+            amount: bn(1e18),
+            assetIn: ZERO_ADDRESS, // ETH
+            assetOut: tokens.DAI.address,
+            userData: '0x',
+          };
+
+          await expectBalanceChange(
+            () => vault.connect(sender).swap(swapData, funds, 0, deadline, { value: bn(1e18) }),
+            tokens,
+            [
+              { account: vault, changes: { WETH: 1e18, DAI: -2e18 } },
+              { account: trader, changes: { DAI: 2e18 } },
+            ]
+          );
+        });
+
+        it('reverts if less ETH than required was supplied (single swap)', async () => {
+          const swapData = {
+            kind: SWAP_KIND.GIVEN_IN,
+            poolId: mainPoolId,
+            amount: bn(1e18),
+            assetIn: ZERO_ADDRESS, // ETH
+            assetOut: tokens.DAI.address,
+            userData: '0x',
+          };
+
+          await expect(
+            vault.connect(sender).swap(swapData, funds, 0, deadline, { value: bn(1e18).sub(1) })
+          ).to.be.revertedWith('INSUFFICIENT_ETH');
+        });
+
+        it('returns excess ETH if more ETH than required was supplied (single swap)', async () => {
+          const swapData = {
+            kind: SWAP_KIND.GIVEN_IN,
+            poolId: mainPoolId,
+            amount: bn(1e18),
+            assetIn: ZERO_ADDRESS, // ETH
+            assetOut: tokens.DAI.address,
+            userData: '0x',
+          };
+
+          const previousBalance = await ethers.provider.getBalance(sender.address);
+
+          const gasPrice = 1;
+          const receipt: ContractReceipt = await (
+            await vault.connect(sender).swap(swapData, funds, 0, deadline, {
+              value: bn(1e18).add(42), // Only 1e18 is required
+              gasPrice,
+            })
+          ).wait();
+
+          const ethSpent = receipt.gasUsed.mul(gasPrice);
+
+          const currentBalance = await ethers.provider.getBalance(sender.address);
+          expect(previousBalance.sub(currentBalance)).to.equal(ethSpent.add(bn(1e18)));
+        });
+
         it('sent WETH is unwrapped into ETH', async () => {
           const swaps = [
             {

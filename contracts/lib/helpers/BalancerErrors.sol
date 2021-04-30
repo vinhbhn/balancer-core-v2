@@ -194,4 +194,8 @@ library Errors {
     uint256 internal constant SWAP_FEE_PERCENTAGE_TOO_HIGH = 600;
     uint256 internal constant FLASH_LOAN_FEE_PERCENTAGE_TOO_HIGH = 601;
     uint256 internal constant INSUFFICIENT_FLASH_LOAN_FEE_AMOUNT = 602;
+
+    // Asset Managers
+    uint256 internal constant INVESTMENT_AMOUNT_EXCEEDS_TARGET = 700;
+    uint256 internal constant INSUFFICIENT_BALANCE_AFTER_WITHDRAWAL = 701;
 }
