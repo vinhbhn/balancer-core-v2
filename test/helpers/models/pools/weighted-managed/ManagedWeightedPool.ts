@@ -6,7 +6,7 @@ import Vault from '../../vault/Vault';
 import TokenList from '../../tokens/TokenList';
 import { RawManagedWeightedPoolDeployment } from './types';
 import ManagedWeightedPoolDeployer from './ManagedWeightedPoolDeployer';
-import WeightedPool from "../weighted/WeightedPool";
+import WeightedPool from '../weighted/WeightedPool';
 
 export default class ManagedWeightedPool extends WeightedPool {
   instance: Contract;
@@ -30,7 +30,7 @@ export default class ManagedWeightedPool extends WeightedPool {
     swapFeePercentage: BigNumberish,
     assetManagers: string[]
   ) {
-    super(instance, poolId, vault, tokens, weights, swapFeePercentage, false)
+    super(instance, poolId, vault, tokens, weights, swapFeePercentage, false);
     this.instance = instance;
     this.poolId = poolId;
     this.vault = vault;

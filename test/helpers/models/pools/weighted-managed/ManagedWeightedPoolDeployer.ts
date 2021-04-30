@@ -36,20 +36,20 @@ export default {
       from,
     } = params;
     return deploy('ManagedWeightedPool', {
-          args: [
-            vault.address,
-            NAME,
-            SYMBOL,
-            tokens.addresses,
-            weights,
-            swapFeePercentage,
-            pauseWindowDuration,
-            bufferPeriodDuration,
-            TypesConverter.toAddress(owner),
-            assetManagers
-          ],
-          from,
-        });
+      args: [
+        vault.address,
+        NAME,
+        SYMBOL,
+        tokens.addresses,
+        weights,
+        swapFeePercentage,
+        pauseWindowDuration,
+        bufferPeriodDuration,
+        TypesConverter.toAddress(owner),
+        assetManagers,
+      ],
+      from,
+    });
   },
 
   async _deployFromFactory(params: ManagedWeightedPoolDeployment, vault: Vault): Promise<Contract> {

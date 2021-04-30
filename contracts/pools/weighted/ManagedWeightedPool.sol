@@ -31,7 +31,7 @@ import "./WeightedPoolUserDataHelpers.sol";
 /**
  * @dev This pool type is intended to be identical to the WeightedPool (without the oracle), with the additional ability
  * to set asset managers for one or more tokens.
- */ 
+ */
 contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedMath {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;

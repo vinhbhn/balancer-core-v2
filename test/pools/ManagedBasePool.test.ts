@@ -45,7 +45,14 @@ describe('ManagedBasePool', function () {
       from?: SignerWithAddress;
     } = {}
   ): Promise<Contract> {
-    let { tokens: poolTokens, swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner, assetManagers } = params;
+    let {
+      tokens: poolTokens,
+      swapFeePercentage,
+      pauseWindowDuration,
+      bufferPeriodDuration,
+      owner,
+      assetManagers,
+    } = params;
     if (!poolTokens) poolTokens = tokens;
     if (!swapFeePercentage) swapFeePercentage = MIN_SWAP_FEE_PERCENTAGE;
     if (!pauseWindowDuration) pauseWindowDuration = 0;
@@ -65,7 +72,7 @@ describe('ManagedBasePool', function () {
         pauseWindowDuration,
         bufferPeriodDuration,
         TypesConverter.toAddress(owner),
-        assetManagers
+        assetManagers,
       ],
     });
   }
@@ -79,7 +86,7 @@ describe('ManagedBasePool', function () {
       const [poolAddress, poolSpecialization] = await vault.getPool(poolId);
       expect(poolAddress).to.equal(pool.address);
       expect(poolSpecialization).to.equal(GeneralPool);
-      
+
       for (let i = 0; i < tokens.length; i++) {
         const [, , , manager] = await vault.getPoolTokenInfo(poolId, tokens.get(i).address);
         expect(manager).to.equal(TypesConverter.toAddress(assetManager));
@@ -89,7 +96,9 @@ describe('ManagedBasePool', function () {
     it('reverts if the tokens are not sorted', async () => {
       const managerAddresses = Array(tokens.length).fill(TypesConverter.toAddress(assetManager));
 
-      await expect(deployBasePool({ tokens: tokens.addresses.reverse(), assetManagers: managerAddresses })).to.be.revertedWith('UNSORTED_ARRAY');
+      await expect(
+        deployBasePool({ tokens: tokens.addresses.reverse(), assetManagers: managerAddresses })
+      ).to.be.revertedWith('UNSORTED_ARRAY');
     });
   });
 
