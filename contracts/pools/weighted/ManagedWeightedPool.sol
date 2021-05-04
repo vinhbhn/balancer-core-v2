@@ -46,8 +46,6 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
     uint256 private immutable _normalizedWeight3;
     uint256 private immutable _normalizedWeight4;
     uint256 private immutable _normalizedWeight5;
-    uint256 private immutable _normalizedWeight6;
-    uint256 private immutable _normalizedWeight7;
 
     uint256 private _lastInvariant;
 
@@ -61,6 +59,7 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
+        address assetController,
         address[] memory assetManagers
     )
         ManagedBasePool(
@@ -73,6 +72,7 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
             pauseWindowDuration,
             bufferPeriodDuration,
             owner,
+            assetController,
             assetManagers
         )
     {
@@ -104,8 +104,6 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
         _normalizedWeight3 = numTokens > 3 ? normalizedWeights[3] : 0;
         _normalizedWeight4 = numTokens > 4 ? normalizedWeights[4] : 0;
         _normalizedWeight5 = numTokens > 5 ? normalizedWeights[5] : 0;
-        _normalizedWeight6 = numTokens > 6 ? normalizedWeights[6] : 0;
-        _normalizedWeight7 = numTokens > 7 ? normalizedWeights[7] : 0;
     }
 
     function _normalizedWeight(IERC20 token) internal view virtual returns (uint256) {
@@ -116,8 +114,6 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
         else if (token == _token3) { return _normalizedWeight3; }
         else if (token == _token4) { return _normalizedWeight4; }
         else if (token == _token5) { return _normalizedWeight5; }
-        else if (token == _token6) { return _normalizedWeight6; }
-        else if (token == _token7) { return _normalizedWeight7; }
         else {
             _revert(Errors.INVALID_TOKEN);
         }
@@ -135,8 +131,6 @@ contract ManagedWeightedPool is IMinimalSwapInfoPool, ManagedBasePool, WeightedM
             if (totalTokens > 3) { normalizedWeights[3] = _normalizedWeight3; } else { return normalizedWeights; }
             if (totalTokens > 4) { normalizedWeights[4] = _normalizedWeight4; } else { return normalizedWeights; }
             if (totalTokens > 5) { normalizedWeights[5] = _normalizedWeight5; } else { return normalizedWeights; }
-            if (totalTokens > 6) { normalizedWeights[6] = _normalizedWeight6; } else { return normalizedWeights; }
-            if (totalTokens > 7) { normalizedWeights[7] = _normalizedWeight7; } else { return normalizedWeights; }
         }
 
         return normalizedWeights;

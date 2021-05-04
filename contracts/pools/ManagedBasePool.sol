@@ -21,7 +21,7 @@ import "../lib/helpers/TemporarilyPausable.sol";
 import "../lib/openzeppelin/ERC20.sol";
 
 import "./BalancerPoolToken.sol";
-import "./BasePoolAuthorization.sol";
+import "./ManagedBasePoolAuthorization.sol";
 import "../vault/interfaces/IVault.sol";
 import "../vault/interfaces/IBasePool.sol";
 
@@ -46,11 +46,11 @@ import "../vault/interfaces/IBasePool.sol";
  * BaseGeneralPool or BaseMinimalSwapInfoPool. Otherwise, subclasses must inherit from the corresponding interfaces
  * and implement the swap callbacks themselves.
  */
-abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerPoolToken, TemporarilyPausable {
+abstract contract ManagedBasePool is IBasePool, ManagedBasePoolAuthorization, BalancerPoolToken, TemporarilyPausable {
     using FixedPoint for uint256;
 
     uint256 private constant _MIN_TOKENS = 2;
-    uint256 private constant _MAX_TOKENS = 8;
+    uint256 private constant _MAX_TOKENS = 6;
 
     // 1e18 corresponds to 1.0, or a 100% fee
     uint256 private constant _MIN_SWAP_FEE_PERCENTAGE = 1e12; // 0.0001%
@@ -70,8 +70,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
     IERC20 internal immutable _token3;
     IERC20 internal immutable _token4;
     IERC20 internal immutable _token5;
-    IERC20 internal immutable _token6;
-    IERC20 internal immutable _token7;
 
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
@@ -83,8 +81,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
     uint256 internal immutable _scalingFactor3;
     uint256 internal immutable _scalingFactor4;
     uint256 internal immutable _scalingFactor5;
-    uint256 internal immutable _scalingFactor6;
-    uint256 internal immutable _scalingFactor7;
 
     event SwapFeePercentageChanged(uint256 swapFeePercentage);
 
@@ -98,6 +94,7 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
+        address assetController,
         address[] memory assetManagers
     )
         // Base Pools are expected to be deployed using factories. By using the factory address as the action
@@ -107,7 +104,7 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
         // if the selectors match, preventing accidental errors.
         Authentication(bytes32(uint256(msg.sender)))
         BalancerPoolToken(name, symbol)
-        BasePoolAuthorization(owner)
+        ManagedBasePoolAuthorization(owner, assetController)
         TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration)
     {
         uint256 tokenLen = tokens.length;
@@ -141,8 +138,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
         _token3 = tokenLen > 3 ? tokens[3] : IERC20(0);
         _token4 = tokenLen > 4 ? tokens[4] : IERC20(0);
         _token5 = tokenLen > 5 ? tokens[5] : IERC20(0);
-        _token6 = tokenLen > 6 ? tokens[6] : IERC20(0);
-        _token7 = tokenLen > 7 ? tokens[7] : IERC20(0);
 
         _scalingFactor0 = tokenLen > 0 ? _computeScalingFactor(tokens[0]) : 0;
         _scalingFactor1 = tokenLen > 1 ? _computeScalingFactor(tokens[1]) : 0;
@@ -150,8 +145,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
         _scalingFactor3 = tokenLen > 3 ? _computeScalingFactor(tokens[3]) : 0;
         _scalingFactor4 = tokenLen > 4 ? _computeScalingFactor(tokens[4]) : 0;
         _scalingFactor5 = tokenLen > 5 ? _computeScalingFactor(tokens[5]) : 0;
-        _scalingFactor6 = tokenLen > 6 ? _computeScalingFactor(tokens[6]) : 0;
-        _scalingFactor7 = tokenLen > 7 ? _computeScalingFactor(tokens[7]) : 0;
     }
 
     // Getters / Setters
@@ -188,6 +181,13 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
     // Caller must be approved by the Vault's Authorizer
     function setPaused(bool paused) external authenticate {
         _setPaused(paused);
+    }
+
+    function setInvestablePercent(IERC20 token, uint256 investablePercent) external authenticate {
+        bytes32 poolId = getPoolId();
+        (, , , address assetManager) = getVault().getPoolTokenInfo(poolId, token);
+
+        AssetManager(assetManager).setInvestablePercent(poolId, investablePercent);
     }
 
     // Join / Exit Hooks
@@ -502,8 +502,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
         else if (token == _token3) { return _scalingFactor3; }
         else if (token == _token4) { return _scalingFactor4; }
         else if (token == _token5) { return _scalingFactor5; }
-        else if (token == _token6) { return _scalingFactor6; }
-        else if (token == _token7) { return _scalingFactor7; }
         else {
             _revert(Errors.INVALID_TOKEN);
         }
@@ -525,8 +523,6 @@ abstract contract ManagedBasePool is IBasePool, BasePoolAuthorization, BalancerP
             if (totalTokens > 3) { scalingFactors[3] = _scalingFactor3; } else { return scalingFactors; }
             if (totalTokens > 4) { scalingFactors[4] = _scalingFactor4; } else { return scalingFactors; }
             if (totalTokens > 5) { scalingFactors[5] = _scalingFactor5; } else { return scalingFactors; }
-            if (totalTokens > 6) { scalingFactors[6] = _scalingFactor6; } else { return scalingFactors; }
-            if (totalTokens > 7) { scalingFactors[7] = _scalingFactor7; } else { return scalingFactors; }
         }
 
         return scalingFactors;

@@ -32,6 +32,7 @@ export default {
       pauseWindowDuration,
       bufferPeriodDuration,
       owner,
+      assetController,
       assetManagers,
       from,
     } = params;
@@ -46,6 +47,7 @@ export default {
         pauseWindowDuration,
         bufferPeriodDuration,
         TypesConverter.toAddress(owner),
+        TypesConverter.toAddress(assetController),
         assetManagers,
       ],
       from,
@@ -53,7 +55,7 @@ export default {
   },
 
   async _deployFromFactory(params: ManagedWeightedPoolDeployment, vault: Vault): Promise<Contract> {
-    const { tokens, weights, swapFeePercentage, owner, assetManagers, from } = params;
+    const { tokens, weights, swapFeePercentage, owner, assetController, assetManagers, from } = params;
 
     const factory = await deploy('ManagedWeightedPoolFactory', { args: [vault.address], from });
     const tx = await factory.create(
@@ -63,6 +65,7 @@ export default {
       weights,
       swapFeePercentage,
       TypesConverter.toAddress(owner),
+      TypesConverter.toAddress(assetController),
       assetManagers
     );
     const receipt = await tx.wait();

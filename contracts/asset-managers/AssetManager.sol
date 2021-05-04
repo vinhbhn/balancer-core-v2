@@ -26,10 +26,12 @@ abstract contract AssetManager {
     using SafeCast for uint256;
 
     /// @notice The Balancer Vault contract
-    IVault public immutable vault; // TODO: make this a constant?
+    IVault public immutable vault;
 
     /// @notice The token which this asset manager is investing
     IERC20 public immutable token;
+
+    uint256 public constant MINIMUM_INVESTABLE_PERCENT = 1e17; // 10%
 
     /// @notice the total AUM of tokens that the asset manager is aware it has earned
     uint256 public totalAUM;
@@ -81,9 +83,10 @@ abstract contract AssetManager {
 
     // Investment configuration
 
-    //function setInvestablePercent(bytes32 poolId, uint256 investmentPercent) external onlyPoolController(poolId) {
-    function setInvestablePercent(bytes32 poolId, uint256 investmentPercent) external {
-        _investablePercent[poolId] = investmentPercent;
+    function setInvestablePercent(bytes32 poolId, uint256 investablePercent) external onlyPoolController(poolId) {
+        _require(investablePercent >= MINIMUM_INVESTABLE_PERCENT, Errors.INVESTABLE_PERCENT_BELOW_MINIMUM);
+
+        _investablePercent[poolId] = investablePercent;
     }
 
     function _getTargetInvestment(

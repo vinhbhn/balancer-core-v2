@@ -28,6 +28,7 @@ contract MockManagedBasePool is ManagedBasePool {
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
+        address assetController,
         address[] memory assetManagers
     )
         ManagedBasePool(
@@ -40,6 +41,7 @@ contract MockManagedBasePool is ManagedBasePool {
             pauseWindowDuration,
             bufferPeriodDuration,
             owner,
+            assetController,
             assetManagers
         )
     {}

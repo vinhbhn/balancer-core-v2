@@ -47,6 +47,7 @@ describe('ManagedWeightedPoolFactory', function () {
         WEIGHTS,
         POOL_SWAP_FEE_PERCENTAGE,
         ZERO_ADDRESS,
+        ZERO_ADDRESS,
         Array(tokens.length).fill(assetManager.address)
       )
     ).wait();

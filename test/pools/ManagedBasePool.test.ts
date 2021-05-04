@@ -41,6 +41,7 @@ describe('ManagedBasePool', function () {
       pauseWindowDuration?: number;
       bufferPeriodDuration?: number;
       owner?: Account;
+      assetController?: Account;
       assetManagers?: Account[];
       from?: SignerWithAddress;
     } = {}
@@ -51,6 +52,7 @@ describe('ManagedBasePool', function () {
       pauseWindowDuration,
       bufferPeriodDuration,
       owner,
+      assetController,
       assetManagers,
     } = params;
     if (!poolTokens) poolTokens = tokens;
@@ -58,6 +60,7 @@ describe('ManagedBasePool', function () {
     if (!pauseWindowDuration) pauseWindowDuration = 0;
     if (!bufferPeriodDuration) bufferPeriodDuration = 0;
     if (!owner) owner = ZERO_ADDRESS;
+    if (!assetController) assetController = ZERO_ADDRESS;
     if (!assetManagers) assetManagers = Array(tokens.length).fill(ZERO_ADDRESS);
 
     return deploy('MockManagedBasePool', {
@@ -72,6 +75,7 @@ describe('ManagedBasePool', function () {
         pauseWindowDuration,
         bufferPeriodDuration,
         TypesConverter.toAddress(owner),
+        TypesConverter.toAddress(assetController),
         assetManagers,
       ],
     });

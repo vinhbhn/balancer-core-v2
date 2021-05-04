@@ -37,6 +37,7 @@ contract ManagedWeightedPoolFactory is BasePoolFactory, FactoryWidePauseWindow {
         uint256[] memory weights,
         uint256 swapFeePercentage,
         address owner,
+        address assetController,
         address[] memory assetManagers
     ) external returns (address) {
         (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
@@ -52,6 +53,7 @@ contract ManagedWeightedPoolFactory is BasePoolFactory, FactoryWidePauseWindow {
                 pauseWindowDuration,
                 bufferPeriodDuration,
                 owner,
+                assetController,
                 assetManagers
             )
         );

@@ -13,6 +13,7 @@ export type RawManagedWeightedPoolDeployment = {
   bufferPeriodDuration?: BigNumberish;
   assetManagers?: string[];
   owner?: Account;
+  assetController?: Account;
   admin?: SignerWithAddress;
   from?: SignerWithAddress;
   fromFactory?: boolean;
@@ -25,6 +26,7 @@ export type ManagedWeightedPoolDeployment = {
   pauseWindowDuration: BigNumberish;
   bufferPeriodDuration: BigNumberish;
   owner: Account;
+  assetController: Account;
   assetManagers: string[];
   admin?: SignerWithAddress;
   from?: SignerWithAddress;

@@ -198,4 +198,5 @@ library Errors {
     // Asset Managers
     uint256 internal constant INVESTMENT_AMOUNT_EXCEEDS_TARGET = 700;
     uint256 internal constant INSUFFICIENT_BALANCE_AFTER_WITHDRAWAL = 701;
+    uint256 internal constant INVESTABLE_PERCENT_BELOW_MINIMUM = 702;
 }

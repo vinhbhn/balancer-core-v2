@@ -13,7 +13,7 @@ import { RawManagedWeightedPoolDeployment } from '../../helpers/models/pools/wei
 describe('ManagedWeightedPool', function () {
   let allTokens: TokenList;
   let trader: SignerWithAddress, recipient: SignerWithAddress, admin: SignerWithAddress;
-  let other: SignerWithAddress, lp: SignerWithAddress, owner: SignerWithAddress;
+  let other: SignerWithAddress, lp: SignerWithAddress, owner: SignerWithAddress, assetController: SignerWithAddress;
   let assetManagerContract: SignerWithAddress;
 
   const POOL_SWAP_FEE_PERCENTAGE = fp(0.01);
@@ -21,7 +21,7 @@ describe('ManagedWeightedPool', function () {
   const INITIAL_BALANCES = [fp(0.9), fp(1.8), fp(2.7), fp(3.6)];
 
   before('setup signers', async () => {
-    [, lp, trader, recipient, other, owner, admin, assetManagerContract] = await ethers.getSigners();
+    [, lp, trader, recipient, other, owner, assetController, admin, assetManagerContract] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy tokens', async () => {
@@ -48,9 +48,9 @@ describe('ManagedWeightedPool', function () {
 
   context('for a too-many token pool', () => {
     it('reverts if there are too many tokens', async () => {
-      // The maximum number of tokens is 8
-      const tokens = await TokenList.create(9);
-      const weights = new Array(9).fill(fp(1));
+      // The maximum number of tokens is 6
+      const tokens = await TokenList.create(7);
+      const weights = new Array(7).fill(fp(1));
 
       await expect(ManagedWeightedPool.create({ tokens, weights })).to.be.revertedWith('MAX_TOKENS');
     });
