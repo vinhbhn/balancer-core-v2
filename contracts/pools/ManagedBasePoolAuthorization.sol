@@ -18,7 +18,6 @@ import "../lib/helpers/Authentication.sol";
 import "../vault/interfaces/IAuthorizer.sol";
 
 import "./ManagedBasePool.sol";
-import "../asset-managers/AssetManager.sol";
 
 /**
  * @dev Base authorization layer implementation for Pools.

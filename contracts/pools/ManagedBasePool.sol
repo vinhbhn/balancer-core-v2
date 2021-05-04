@@ -24,6 +24,7 @@ import "./BalancerPoolToken.sol";
 import "./ManagedBasePoolAuthorization.sol";
 import "../vault/interfaces/IVault.sol";
 import "../vault/interfaces/IBasePool.sol";
+import "../asset-managers/IAssetManager.sol";
 
 // This contract relies on tons of immutable state variables to perform efficient lookup, without resorting to storage
 // reads. Because immutable arrays are not supported, we instead declare a fixed set of state variables plus a total
@@ -187,7 +188,7 @@ abstract contract ManagedBasePool is IBasePool, ManagedBasePoolAuthorization, Ba
         bytes32 poolId = getPoolId();
         (, , , address assetManager) = getVault().getPoolTokenInfo(poolId, token);
 
-        AssetManager(assetManager).setInvestablePercent(poolId, investablePercent);
+        IAssetManager(assetManager).setInvestablePercent(poolId, investablePercent);
     }
 
     // Join / Exit Hooks
