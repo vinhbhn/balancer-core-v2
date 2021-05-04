@@ -19,9 +19,19 @@ export default {
     const vault = await VaultDeployer.deploy(TypesConverter.toRawVaultDeployment(params));
     const pool = await (params.fromFactory ? this._deployFromFactory : this._deployStandalone)(deployment, vault);
 
-    const { tokens, weights, swapFeePercentage, assetManagers } = deployment;
+    const { tokens, weights, swapFeePercentage, owner, assetController, assetManagers } = deployment;
     const poolId = await pool.getPoolId();
-    return new ManagedWeightedPool(pool, poolId, vault, tokens, weights, swapFeePercentage, assetManagers);
+    return new ManagedWeightedPool(
+      pool,
+      poolId,
+      vault,
+      tokens,
+      weights,
+      swapFeePercentage,
+      owner,
+      assetController,
+      assetManagers
+    );
   },
 
   async _deployStandalone(params: ManagedWeightedPoolDeployment, vault: Vault): Promise<Contract> {

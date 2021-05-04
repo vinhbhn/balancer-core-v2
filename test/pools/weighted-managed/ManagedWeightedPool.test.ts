@@ -70,6 +70,8 @@ describe('ManagedWeightedPool', function () {
           tokens,
           weights,
           swapFeePercentage: POOL_SWAP_FEE_PERCENTAGE,
+          owner: owner,
+          assetController: assetController,
           assetManagers: Array(tokens.length).fill(assetManagerContract.address),
         },
         params
@@ -117,6 +119,14 @@ describe('ManagedWeightedPool', function () {
           });
         });
 
+        it('sets the owner', async () => {
+          expect(await pool.getOwner()).to.equal(owner.address);
+        });
+
+        it('sets the asset controller', async () => {
+          expect(await pool.getAssetController()).to.equal(assetController.address);
+        });
+
         it('sets token weights', async () => {
           const normalizedWeights = await pool.getNormalizedWeights();
 
@@ -126,6 +136,38 @@ describe('ManagedWeightedPool', function () {
         it('sets swap fee', async () => {
           expect(await pool.getSwapFeePercentage()).to.equal(POOL_SWAP_FEE_PERCENTAGE);
         });
+
+        it('owner can set the swap fee percentage', async () => {
+          await pool.setSwapFeePercentage(owner, fp(0.02));
+
+          expect(await pool.getSwapFeePercentage()).to.equal(fp(0.02));
+        });
+
+        it('it cannot set the swap fee below the minimum', async () => {
+          await expect(pool.setSwapFeePercentage(owner, 0)).to.be.revertedWith('MIN_SWAP_FEE_PERCENTAGE');
+        });
+
+        it('it cannot set the swap fee above the maximum', async () => {
+          await expect(pool.setSwapFeePercentage(owner, fp(0.2))).to.be.revertedWith('MAX_SWAP_FEE_PERCENTAGE');
+        });
+
+        it('assetController cannot set the swap fee percentage', async () => {
+          await expect(pool.setSwapFeePercentage(assetController, fp(0.02))).to.be.revertedWith('SENDER_NOT_ALLOWED');
+        });
+
+        /* TODO: have to mock asset manager so there's a real contract to call, for this to work
+
+        it('assetController can set the investable percentage', async () => {
+          await pool.setInvestablePercent(assetController, tokens.DAI.address, fp(0.8));
+        });
+
+        it('it cannot set the investable percentage below the minimum', async () => {
+          await expect(pool.setInvestablePercent(assetController, tokens.DAI.address, fp(0.05))).to.be.revertedWith('INVESTABLE_PERCENT_BELOW_MINIMUM');
+        });
+
+        it('owner cannot set the swap fee percentage', async () => {
+          await expect(pool.setInvestablePercent(owner, tokens.DAI.address, fp(0.8))).to.be.revertedWith('SENDER_NOT_ALLOWED');
+        }); */
 
         it('sets the name', async () => {
           expect(await pool.name()).to.equal('Balancer Pool Token');

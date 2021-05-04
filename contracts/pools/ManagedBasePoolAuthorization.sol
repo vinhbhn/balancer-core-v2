@@ -74,7 +74,7 @@ abstract contract ManagedBasePoolAuthorization is Authentication {
 
     function _isAssetControllerOnlyAction(bytes32 actionId) private view returns (bool) {
         // This implementation hardcodes the setInvestablePercent action identifier.
-        return actionId == getActionId(AssetManager.setInvestablePercent.selector);
+        return actionId == getActionId(ManagedBasePool.setInvestablePercent.selector);
     }
 
     function _getAuthorizer() internal view virtual returns (IAuthorizer);

@@ -183,7 +183,7 @@ abstract contract ManagedBasePool is IBasePool, ManagedBasePoolAuthorization, Ba
         _setPaused(paused);
     }
 
-    function setInvestablePercent(IERC20 token, uint256 investablePercent) external authenticate {
+    function setInvestablePercent(IERC20 token, uint256 investablePercent) external virtual authenticate whenNotPaused {
         bytes32 poolId = getPoolId();
         (, , , address assetManager) = getVault().getPoolTokenInfo(poolId, token);
 
