@@ -17,7 +17,7 @@ import TypesConverter from '../helpers/models/types/TypesConverter';
 describe('ManagedBasePool', function () {
   let admin: SignerWithAddress, poolOwner: SignerWithAddress, deployer: SignerWithAddress, other: SignerWithAddress;
   let authorizer: Contract, vault: Contract;
-  let assetManager: SignerWithAddress;
+  let assetManager: Contract;
   let tokens: TokenList;
 
   const MIN_SWAP_FEE_PERCENTAGE = fp(0.000001);
@@ -25,12 +25,13 @@ describe('ManagedBasePool', function () {
   const DELEGATE_OWNER = '0xBA1BA1ba1BA1bA1bA1Ba1BA1ba1BA1bA1ba1ba1B';
 
   before(async () => {
-    [, admin, poolOwner, deployer, other, assetManager] = await ethers.getSigners();
+    [, admin, poolOwner, deployer, other] = await ethers.getSigners();
   });
 
   sharedBeforeEach(async () => {
     authorizer = await deploy('Authorizer', { args: [admin.address] });
     vault = await deploy('Vault', { args: [authorizer.address, ZERO_ADDRESS, 0, 0] });
+    assetManager = await deploy('MockAssetManager');
     tokens = await TokenList.create(['DAI', 'MKR', 'SNX'], { sorted: true });
   });
 

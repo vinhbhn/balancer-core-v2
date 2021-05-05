@@ -14,7 +14,19 @@
 
 pragma solidity ^0.7.0;
 
-interface IAssetManager {
-    // Implementers should ensure the caller is the Pool
-    function setInvestablePercent(bytes32 poolId, uint256 investablePercent) external;
+import "../asset-managers/IAssetManager.sol";
+import "../lib/helpers/BalancerErrors.sol";
+
+contract MockAssetManager is IAssetManager {
+    uint256 public constant MINIMUM_INVESTABLE_PERCENT = 1e17; // 10%
+
+    modifier onlyPoolController(bytes32 poolId) {
+        address poolAddress = address((uint256(poolId) >> (12 * 8)) & (2**(20 * 8) - 1));
+        _require(msg.sender == poolAddress, Errors.CALLER_NOT_POOL);
+        _;
+    }
+
+    function setInvestablePercent(bytes32 poolId, uint256 investablePercent) external override onlyPoolController(poolId) {
+        _require(investablePercent >= MINIMUM_INVESTABLE_PERCENT, Errors.INVESTABLE_PERCENT_BELOW_MINIMUM);
+    }
 }

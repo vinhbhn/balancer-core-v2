@@ -1,10 +1,11 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 import { MinimalSwapInfoPool, TwoTokenPool } from '../../../lib/helpers/pools';
 import { BigNumberish, bn, fp, pct } from '../../../lib/helpers/numbers';
+import { deploy } from '../../../lib/helpers/deploy';
 
 import TokenList from '../../helpers/models/tokens/TokenList';
 import ManagedWeightedPool from '../../helpers/models/pools/weighted-managed/ManagedWeightedPool';
@@ -14,19 +15,20 @@ describe('ManagedWeightedPool', function () {
   let allTokens: TokenList;
   let trader: SignerWithAddress, recipient: SignerWithAddress, admin: SignerWithAddress;
   let other: SignerWithAddress, lp: SignerWithAddress, owner: SignerWithAddress, assetController: SignerWithAddress;
-  let assetManagerContract: SignerWithAddress;
+  let assetManagerContract: Contract;
 
   const POOL_SWAP_FEE_PERCENTAGE = fp(0.01);
   const WEIGHTS = [fp(30), fp(70), fp(5), fp(5)];
   const INITIAL_BALANCES = [fp(0.9), fp(1.8), fp(2.7), fp(3.6)];
 
   before('setup signers', async () => {
-    [, lp, trader, recipient, other, owner, assetController, admin, assetManagerContract] = await ethers.getSigners();
+    [, lp, trader, recipient, other, owner, assetController, admin] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy tokens', async () => {
     allTokens = await TokenList.create(['MKR', 'DAI', 'SNX', 'BAT'], { sorted: true });
     await allTokens.mint({ to: [lp, trader], amount: fp(100) });
+    assetManagerContract = await deploy('MockAssetManager');
   });
 
   context('for a 1 token pool', () => {
@@ -155,19 +157,21 @@ describe('ManagedWeightedPool', function () {
           await expect(pool.setSwapFeePercentage(assetController, fp(0.02))).to.be.revertedWith('SENDER_NOT_ALLOWED');
         });
 
-        /* TODO: have to mock asset manager so there's a real contract to call, for this to work
-
         it('assetController can set the investable percentage', async () => {
           await pool.setInvestablePercent(assetController, tokens.DAI.address, fp(0.8));
         });
 
         it('it cannot set the investable percentage below the minimum', async () => {
-          await expect(pool.setInvestablePercent(assetController, tokens.DAI.address, fp(0.05))).to.be.revertedWith('INVESTABLE_PERCENT_BELOW_MINIMUM');
+          await expect(pool.setInvestablePercent(assetController, tokens.DAI.address, fp(0.05))).to.be.revertedWith(
+            'INVESTABLE_PERCENT_BELOW_MINIMUM'
+          );
         });
 
         it('owner cannot set the swap fee percentage', async () => {
-          await expect(pool.setInvestablePercent(owner, tokens.DAI.address, fp(0.8))).to.be.revertedWith('SENDER_NOT_ALLOWED');
-        }); */
+          await expect(pool.setInvestablePercent(owner, tokens.DAI.address, fp(0.8))).to.be.revertedWith(
+            'SENDER_NOT_ALLOWED'
+          );
+        });
 
         it('sets the name', async () => {
           expect(await pool.name()).to.equal('Balancer Pool Token');
