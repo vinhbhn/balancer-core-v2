@@ -26,6 +26,8 @@ const CHAIN_IDS = {
   rinkeby: 4,
   ropsten: 3,
   dockerParity: 17,
+  mumbai: 80001,
+  polygon: 137,
 };
 
 const INFURA_KEY = process.env.INFURA_KEY || '';
@@ -81,6 +83,18 @@ export default {
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
       saveDeployments: true,
     },
+    mumbai: {
+      // chainId: CHAIN_IDS.mumbai,
+      url: `https://matic-mumbai.chainstacklabs.com`,
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
+      saveDeployments: true,
+    },
+    polygon: {
+      chainId: CHAIN_IDS.polygon,
+      url: `https://matic-mainnet.chainstacklabs.com`,
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
+      saveDeployments: true,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -91,6 +105,8 @@ export default {
       [CHAIN_IDS.goerli]: 0,
       [CHAIN_IDS.rinkeby]: 0,
       [CHAIN_IDS.dockerParity]: 0,
+      [CHAIN_IDS.mumbai]: 0,
+      [CHAIN_IDS.polygon]: 0,
     },
     admin: {
       default: 1, // here this will by default take the first account as deployer
@@ -101,6 +117,8 @@ export default {
       [CHAIN_IDS.goerli]: 1,
       [CHAIN_IDS.rinkeby]: '0x44DDF1D6292F36B25230a72aBdc7159D37d317Cf',
       [CHAIN_IDS.dockerParity]: 1,
+      [CHAIN_IDS.mumbai]: 1,
+      [CHAIN_IDS.polygon]: 1,
     },
   },
   solidity: {
@@ -146,7 +164,7 @@ export default {
     },
   },
   tenderly: {
-    username: 'balancer',
+    username: 'kanesam301',
     project: 'v2',
   },
   paths: {
