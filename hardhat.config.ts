@@ -84,7 +84,7 @@ export default {
       saveDeployments: true,
     },
     mumbai: {
-      // chainId: CHAIN_IDS.mumbai,
+      chainId: CHAIN_IDS.mumbai,
       url: `https://matic-mumbai.chainstacklabs.com`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
       saveDeployments: true,
