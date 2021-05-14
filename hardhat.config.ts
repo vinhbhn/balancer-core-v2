@@ -85,13 +85,13 @@ export default {
     },
     mumbai: {
       chainId: CHAIN_IDS.mumbai,
-      url: `https://matic-mumbai.chainstacklabs.com`,
+      url: `https://polygon-mumbai.infura.io/v3/${INFURA_KEY}`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
       saveDeployments: true,
     },
     polygon: {
       chainId: CHAIN_IDS.polygon,
-      url: `https://matic-mainnet.chainstacklabs.com`,
+      url: `https://polygon-mainnet.infura.io/v3/${INFURA_KEY}`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${CONTROLLER_PRIVATE_KEY}`], // Using private key instead of mnemonic for vanity deploy
       saveDeployments: true,
     },
